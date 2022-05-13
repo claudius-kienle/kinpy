@@ -80,3 +80,9 @@ class Frame(object):
         else:
             raise ValueError("Unsupported joint type %s." % self.joint.joint_type)
         return self.joint.offset * t
+
+    def get_transform_matrizes(self, thetab: np.array) -> np.array:
+        transform_matrizes = np.empty((len(thetab), 4, 4))
+        for idx, theta in enumerate(thetab):
+            transform_matrizes[idx] = self.get_transform(theta).matrix()
+        return transform_matrizes

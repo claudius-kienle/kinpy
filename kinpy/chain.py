@@ -135,6 +135,53 @@ class SerialChain(Chain):
                 cnt += 1
         return link_transforms[self._serial_frames[-1].link.name] if end_only else link_transforms
 
+    def forward_kinematics_np(self, th: List[float], end_only: bool = True) -> Union[transform.Transform, Dict[str, transform.Transform]]:
+        """
+        Returns:
+            if end_only False:
+                link_transforms: np.array (num_serial_frames, 4, 4)
+            else:
+                link_transforms: np.array (4, 4)
+
+        """
+        cnt = 0
+        link_transforms = np.empty(shape=(len(self._serial_frames), 4, 4))
+        trans = np.eye(4) # initial transformation matrix
+        for idx, f in enumerate(self._serial_frames):
+            if f.joint.joint_type != "fixed":
+                trans = trans @ f.get_transform(th[cnt]).matrix()
+            else:
+                trans = trans @ f.get_transform().matrix()
+            link_transforms[idx] = trans @ f.link.offset.matrix()
+            if f.joint.joint_type != "fixed":
+                cnt += 1
+        return link_transforms[-1] if end_only else link_transforms
+
+    def forward_kinematics_batch(self, thb: np.array, end_only: bool = True) -> Union[transform.Transform, Dict[str, transform.Transform]]:
+        """
+        Arguments:
+            thb: np.arrray (batch_size, dof)
+        Returns:
+            if end_only False:
+                link_transforms: np.array (batch_size, num_serial_frames, 4, 4)
+            else:
+                link_transforms: np.array (batch_size, 4, 4)
+
+        """
+        cnt = 0
+        link_transformsb = np.empty(shape=(len(thb), len(self._serial_frames), 4, 4))
+        trans = np.repeat(np.eye(4)[None], repeats=len(thb), axis=0) # initial transformation matrix
+        for idx, f in enumerate(self._serial_frames):
+            if f.joint.joint_type != "fixed":
+                trans = trans @ f.get_transform_matrizes(thb[:, cnt])
+                # trans = trans @ f.get_transform(th[cnt]).matrix()
+            else:
+                trans = trans @ f.get_transform().matrix()[None]
+            link_transformsb[:, idx] = trans @ f.link.offset.matrix()[None]
+            if f.joint.joint_type != "fixed":
+                cnt += 1
+        return link_transformsb[:, -1] if end_only else link_transformsb
+
     def jacobian(self, th: List[float], end_only: bool = True) -> np.ndarray:
         if end_only:
             return jacobian.calc_jacobian(self, th)
@@ -142,6 +189,26 @@ class SerialChain(Chain):
             jacobians = {}
             for serial_frame in self._serial_frames:
                 jac = jacobian.calc_jacobian_frames(self, th, link_name=serial_frame.link.name)
+                jacobians[serial_frame.link.name] = jac
+            return jacobians
+
+    def jacobian_batch(self, thb: np.array, end_only: bool = True) -> np.ndarray:
+        """
+        Arguments:
+            thb: np.arrray (batch_size, dof)
+        Returns:
+            if end_only False:
+                link_transforms: np.array (batch_size, num_serial_frames, 4, 4)
+            else:
+                link_transforms: np.array (batch_size, 4, 4)
+
+        """
+        if end_only:
+            return jacobian.calc_jacobian(self, thb)
+        else:
+            jacobians = {}
+            for serial_frame in self._serial_frames:
+                jac = jacobian.calc_jacobian_frames_batch(self, thb, link_name=serial_frame.link.name)
                 jacobians[serial_frame.link.name] = jac
             return jacobians
 
