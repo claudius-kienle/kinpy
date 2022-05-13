@@ -192,23 +192,24 @@ class SerialChain(Chain):
                 jacobians[serial_frame.link.name] = jac
             return jacobians
 
-    def jacobian_batch(self, thb: np.array, end_only: bool = True) -> np.ndarray:
+    def jacobian_batch(self, thb: np.array, poseb: Optional[np.array], end_only: bool = True) -> np.ndarray:
         """
         Arguments:
             thb: np.arrray (batch_size, dof)
+            poseb: np.array (batch_size, 4, 4)
         Returns:
             if end_only False:
                 link_transforms: np.array (batch_size, num_serial_frames, 4, 4)
             else:
-                link_transforms: np.array (batch_size, 4, 4)
+                link_transforms: np.array (batch_size, num_serial_frames, 4, 4)
 
         """
         if end_only:
             return jacobian.calc_jacobian(self, thb)
         else:
             jacobians = {}
-            for serial_frame in self._serial_frames:
-                jac = jacobian.calc_jacobian_frames_batch(self, thb, link_name=serial_frame.link.name)
+            for idx, serial_frame in enumerate(self._serial_frames):
+                jac = jacobian.calc_jacobian_frames_batch(self, thb, poseb=poseb[:, idx], link_name=serial_frame.link.name)
                 jacobians[serial_frame.link.name] = jac
             return jacobians
 
