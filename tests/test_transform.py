@@ -12,7 +12,9 @@ class TestTransform(unittest.TestCase):
     def test_multiply(self):
         t = random_transform()
         res = t * t.inverse()
-        self.assertTrue(np.allclose(res.rot, np.array([1.0, 0.0, 0.0, 0.0]), atol=1.0e-6))
+        self.assertTrue(
+            np.allclose(res.rot, np.array([1.0, 0.0, 0.0, 0.0]), atol=1.0e-6)
+        )
         self.assertTrue(np.allclose(res.pos, np.array([0.0, 0.0, 0.0]), atol=1.0e-6))
 
 

@@ -18,14 +18,17 @@ def reflect(cls, *args, **kwargs):
     """
     cls.XML_REFL = Reflection(*args, **kwargs)
 
+
 # Rename 'write_xml' to 'write_xml' to have paired 'load/dump', and make
 # 'pre_dump' and 'post_load'?
 # When dumping to yaml, include tag name?
 
 # How to incorporate line number and all that jazz?
 def on_error_stderr(message):
-    """ What to do on an error. This can be changed to raise an exception. """
-    sys.stderr.write(message + '\n')
+    """What to do on an error. This can be changed to raise an exception."""
+    sys.stderr.write(message + "\n")
+
+
 on_error = on_error_stderr
 
 
@@ -34,7 +37,7 @@ skip_default = False
 
 # Registering Types
 value_types = {}
-value_type_prefix = ''
+value_type_prefix = ""
 
 
 def start_namespace(namespace):
@@ -43,12 +46,12 @@ def start_namespace(namespace):
     @note Does not handle nesting!
     """
     global value_type_prefix
-    value_type_prefix = namespace + '.'
+    value_type_prefix = namespace + "."
 
 
 def end_namespace():
     global value_type_prefix
-    value_type_prefix = ''
+    value_type_prefix = ""
 
 
 def add_type(key, value):
@@ -59,7 +62,7 @@ def add_type(key, value):
 
 
 def get_type(cur_type):
-    """ Can wrap value types if needed """
+    """Can wrap value types if needed"""
     if value_type_prefix and isinstance(cur_type, str):
         # See if it exists in current 'namespace'
         curKey = value_type_prefix + cur_type
@@ -79,7 +82,7 @@ def make_type(cur_type):
     if isinstance(cur_type, ValueType):
         return cur_type
     elif isinstance(cur_type, str):
-        if cur_type.startswith('vector'):
+        if cur_type.startswith("vector"):
             extra = cur_type[6:]
             if extra:
                 count = float(extra)
@@ -103,7 +106,7 @@ class Path(object):
         self.parent = parent
         self.tag = tag
         self.suffix = suffix
-        self.tree = tree # For validating general path (getting true XML path)
+        self.tree = tree  # For validating general path (getting true XML path)
 
     def __str__(self):
         if self.parent is not None:
@@ -114,6 +117,7 @@ class Path(object):
             else:
                 return self.suffix
 
+
 class ParseError(Exception):
     def __init__(self, e, path):
         self.e = e
@@ -123,7 +127,7 @@ class ParseError(Exception):
 
 
 class ValueType(object):
-    """ Primitive value type """
+    """Primitive value type"""
 
     def from_xml(self, node, path):
         return self.from_string(node.text)
@@ -154,13 +158,15 @@ class BasicType(ValueType):
 
 class ListType(ValueType):
     def to_string(self, values):
-        return ' '.join(values)
+        return " ".join(values)
 
     def from_string(self, text):
         return text.split()
 
     def equals(self, aValues, bValues):
-        return len(aValues) == len(bValues) and all(a == b for (a, b) in zip(aValues, bValues))  # noqa
+        return len(aValues) == len(bValues) and all(
+            a == b for (a, b) in zip(aValues, bValues)
+        )  # noqa
 
 
 class VectorType(ListType):
@@ -283,7 +289,7 @@ class DuckTypedFactory(ValueType):
 
 
 class Param(object):
-    """ Mirroring Gazebo's SDF api
+    """Mirroring Gazebo's SDF api
 
     @param xml_var: Xml name
             @todo If the value_type is an object with a tag defined in it's
@@ -292,8 +298,7 @@ class Param(object):
                 XML name
     """
 
-    def __init__(self, xml_var, value_type, required=True, default=None,
-                 var=None):
+    def __init__(self, xml_var, value_type, required=True, default=None, var=None):
         self.xml_var = xml_var
         if var is None:
             self.var = xml_var
@@ -303,25 +308,28 @@ class Param(object):
         self.value_type = get_type(value_type)
         self.default = default
         if required:
-            assert default is None, "Default does not make sense for a required field"  # noqa
+            assert (
+                default is None
+            ), "Default does not make sense for a required field"  # noqa
         self.required = required
         self.is_aggregate = False
 
     def set_default(self, obj):
         if self.required:
-            raise Exception("Required {} not set in XML: {}".format(self.type, self.xml_var))  # noqa
+            raise Exception(
+                "Required {} not set in XML: {}".format(self.type, self.xml_var)
+            )  # noqa
         elif not skip_default:
             setattr(obj, self.var, self.default)
 
 
 class Attribute(Param):
-    def __init__(self, xml_var, value_type, required=True, default=None,
-                 var=None):
+    def __init__(self, xml_var, value_type, required=True, default=None, var=None):
         Param.__init__(self, xml_var, value_type, required, default, var)
-        self.type = 'attribute'
+        self.type = "attribute"
 
     def set_from_string(self, obj, value):
-        """ Node is the parent node in this case """
+        """Node is the parent node in this case"""
         # Duplicate attributes cannot occur at this point
         setattr(obj, self.var, self.value_type.from_string(value))
 
@@ -333,12 +341,15 @@ class Attribute(Param):
         # Do not set with default value if value is None
         if value is None:
             if self.required:
-                raise Exception("Required attribute not set in object: {}".format(self.var))  # noqa
+                raise Exception(
+                    "Required attribute not set in object: {}".format(self.var)
+                )  # noqa
             elif not skip_default:
                 value = self.default
         # Allow value type to handle None?
         if value is not None:
             node.set(self.xml_var, self.value_type.to_string(value))
+
 
 # Add option if this requires a header?
 # Like <joints> <joint/> .... </joints> ???
@@ -346,10 +357,11 @@ class Attribute(Param):
 
 
 class Element(Param):
-    def __init__(self, xml_var, value_type, required=True, default=None,
-                 var=None, is_raw=False):
+    def __init__(
+        self, xml_var, value_type, required=True, default=None, var=None, is_raw=False
+    ):
         Param.__init__(self, xml_var, value_type, required, default, var)
-        self.type = 'element'
+        self.type = "element"
         self.is_raw = is_raw
 
     def set_from_xml(self, obj, node, path):
@@ -360,7 +372,9 @@ class Element(Param):
         value = getattr(obj, self.xml_var)
         if value is None:
             if self.required:
-                raise Exception("Required element not defined in object: {}".format(self.var))  # noqa
+                raise Exception(
+                    "Required element not defined in object: {}".format(self.var)
+                )  # noqa
             elif not skip_default:
                 value = self.default
         if value is not None:
@@ -377,9 +391,10 @@ class Element(Param):
 class AggregateElement(Element):
     def __init__(self, xml_var, value_type, var=None, is_raw=False):
         if var is None:
-            var = xml_var + 's'
-        Element.__init__(self, xml_var, value_type, required=False, var=var,
-                         is_raw=is_raw)
+            var = xml_var + "s"
+        Element.__init__(
+            self, xml_var, value_type, required=False, var=var, is_raw=is_raw
+        )
         self.is_aggregate = True
 
     def add_from_xml(self, obj, node, path):
@@ -391,7 +406,7 @@ class AggregateElement(Element):
 
 
 class Info:
-    """ Small container for keeping track of what's been consumed """
+    """Small container for keeping track of what's been consumed"""
 
     def __init__(self, node):
         self.attributes = list(node.attrib.keys())
@@ -400,7 +415,7 @@ class Info:
 
 class Reflection(object):
     def __init__(self, params=[], parent_cls=None, tag=None):
-        """ Construct a XML reflection thing
+        """Construct a XML reflection thing
         @param parent_cls: Parent class, to use it's reflection as well.
         @param tag: Only necessary if you intend to use Object.write_xml_doc()
                 This does not override the name supplied in the reflection
@@ -467,15 +482,15 @@ class Reflection(object):
 
         def get_attr_path(attribute):
             attr_path = copy.copy(path)
-            attr_path.suffix += '[@{}]'.format(attribute.xml_var)
+            attr_path.suffix += "[@{}]".format(attribute.xml_var)
             return attr_path
 
         def get_element_path(element):
-            element_path = Path(element.xml_var, parent = path)
+            element_path = Path(element.xml_var, parent=path)
             # Add an index (allow this to be overriden)
             if element.is_aggregate:
                 values = obj.get_aggregate_list(element.xml_var)
-                index = 1 + len(values) # 1-based indexing for W3C XPath
+                index = 1 + len(values)  # 1-based indexing for W3C XPath
                 element_path.suffix = "[{}]".format(index)
             return element_path
 
@@ -490,7 +505,9 @@ class Reflection(object):
                     attribute.set_from_string(obj, value)
                     if attribute.xml_var == id_var:
                         # Add id_var suffix to current path (do not copy so it propagates)
-                        path.suffix = "[@{}='{}']".format(id_var, attribute.get_value(obj))
+                        path.suffix = "[@{}='{}']".format(
+                            id_var, attribute.get_value(obj)
+                        )
                 except ParseError:
                     raise
                 except Exception as e:
@@ -512,7 +529,9 @@ class Reflection(object):
                         element.set_from_xml(obj, child, element_path)
                         unset_scalars.remove(tag)
                     else:
-                        on_error("Scalar element defined multiple times: {}".format(tag))  # noqa
+                        on_error(
+                            "Scalar element defined multiple times: {}".format(tag)
+                        )  # noqa
                 info.children.remove(child)
 
         # For unset attributes and scalar elements, we should not pass the attribute
@@ -525,7 +544,7 @@ class Reflection(object):
             except ParseError:
                 raise
             except Exception as e:
-                raise ParseError(e, path) # get_attr_path(attribute.xml_var)
+                raise ParseError(e, path)  # get_attr_path(attribute.xml_var)
 
         for element in map(self.element_map.get, unset_scalars):
             try:
@@ -533,7 +552,7 @@ class Reflection(object):
             except ParseError:
                 raise
             except Exception as e:
-                raise ParseError(e, path) # get_element_path(element)
+                raise ParseError(e, path)  # get_element_path(element)
 
         if is_final:
             for xml_var in info.attributes:
@@ -556,7 +575,8 @@ class Reflection(object):
 
 
 class Object(YamlReflection):
-    """ Raw python object for yaml / xml representation """
+    """Raw python object for yaml / xml representation"""
+
     XML_REFL = None
 
     def get_refl_vars(self):
@@ -566,20 +586,22 @@ class Object(YamlReflection):
         pass
 
     def pre_write_xml(self):
-        """ If anything needs to be converted prior to dumping to xml
-        i.e., getting the names of objects and such """
+        """If anything needs to be converted prior to dumping to xml
+        i.e., getting the names of objects and such"""
         pass
 
     def write_xml(self, node):
-        """ Adds contents directly to XML node """
+        """Adds contents directly to XML node"""
         self.check_valid()
         self.pre_write_xml()
         self.XML_REFL.add_to_xml(self, node)
 
     def to_xml(self):
-        """ Creates an overarching tag and adds its contents to the node """
+        """Creates an overarching tag and adds its contents to the node"""
         tag = self.XML_REFL.tag
-        assert tag is not None, "Must define 'tag' in reflection to use this function"  # noqa
+        assert (
+            tag is not None
+        ), "Must define 'tag' in reflection to use this function"  # noqa
         doc = etree.Element(tag)
         self.write_xml(doc)
         return doc
@@ -613,7 +635,7 @@ class Object(YamlReflection):
 
     @classmethod
     def from_xml_file(cls, file_path):
-        xml_string = open(file_path, 'r').read()
+        xml_string = open(file_path, "r").read()
         return cls.from_xml_string(xml_string)
 
     # Confusing distinction between loading code in object and reflection
@@ -626,14 +648,14 @@ class Object(YamlReflection):
         return values
 
     def aggregate_init(self):
-        """ Must be called in constructor! """
+        """Must be called in constructor!"""
         self.aggregate_order = []
         # Store this info in the loaded object??? Nah
         self.aggregate_type = {}
 
     def add_aggregate(self, xml_var, obj):
-        """ NOTE: One must keep careful track of aggregate types for this system.
-        Can use 'lump_aggregates()' before writing if you don't care. """
+        """NOTE: One must keep careful track of aggregate types for this system.
+        Can use 'lump_aggregates()' before writing if you don't care."""
         self.get_aggregate_list(xml_var).append(obj)
         self.aggregate_order.append(obj)
         self.aggregate_type[obj] = xml_var
@@ -651,7 +673,7 @@ class Object(YamlReflection):
         self.get_aggregate_list(xml_var).remove(obj)
 
     def lump_aggregates(self):
-        """ Put all aggregate types together, just because """
+        """Put all aggregate types together, just because"""
         self.aggregate_init()
         for param in self.XML_REFL.aggregates:
             for obj in self.get_aggregate_list(param.xml_var):
@@ -668,10 +690,10 @@ class Object(YamlReflection):
 
 # Really common types
 # Better name: element_with_name? Attributed element?
-add_type('element_name', SimpleElementType('name', str))
-add_type('element_value', SimpleElementType('value', float))
+add_type("element_name", SimpleElementType("name", str))
+add_type("element_value", SimpleElementType("value", float))
 
 # Add in common vector types so they aren't absorbed into the namespaces
-get_type('vector3')
-get_type('vector4')
-get_type('vector6')
+get_type("vector3")
+get_type("vector4")
+get_type("vector6")

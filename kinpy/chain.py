@@ -42,7 +42,9 @@ class Chain(object):
         return self._find_link_recursive(name, self._root)
 
     @staticmethod
-    def _get_joint_parameter_names(frame: frame.Frame, exclude_fixed: bool = True) -> List[str]:
+    def _get_joint_parameter_names(
+        frame: frame.Frame, exclude_fixed: bool = True
+    ) -> List[str]:
         joint_names = []
         if not (exclude_fixed and frame.joint.joint_type == "fixed"):
             joint_names.append(frame.joint.name)
@@ -60,7 +62,11 @@ class Chain(object):
             frame.add_child(frame)
 
     @staticmethod
-    def _forward_kinematics(root: frame.Frame, th_dict: Dict[str, float], world: transform.Transform = transform.Transform()) -> Dict[str, transform.Transform]:
+    def _forward_kinematics(
+        root: frame.Frame,
+        th_dict: Dict[str, float],
+        world: transform.Transform = transform.Transform(),
+    ) -> Dict[str, transform.Transform]:
         link_transforms = {}
         trans = world * root.get_transform(th_dict.get(root.joint.name, 0.0))
         link_transforms[root.link.name] = trans * root.link.offset
@@ -68,7 +74,9 @@ class Chain(object):
             link_transforms.update(Chain._forward_kinematics(child, th_dict, trans))
         return link_transforms
 
-    def forward_kinematics(self, th: Union[Dict[str, float], List[float]], world=transform.Transform()) -> Dict[str, transform.Transform]:
+    def forward_kinematics(
+        self, th: Union[Dict[str, float], List[float]], world=transform.Transform()
+    ) -> Dict[str, transform.Transform]:
         if not isinstance(th, dict):
             jn = self.get_joint_parameter_names()
             assert len(jn) == len(th)
@@ -90,25 +98,32 @@ class Chain(object):
 
 
 class SerialChain(Chain):
-    def __init__(self, chain: Chain, end_frame_name: str,
-                 root_frame_name: str = "") -> None:
+    def __init__(
+        self, chain: Chain, end_frame_name: str, root_frame_name: str = ""
+    ) -> None:
         if root_frame_name == "":
             self._root = chain._root
         else:
             self._root = chain.find_frame(root_frame_name)
             if self._root is None:
                 raise ValueError("Invalid root frame name %s." % root_frame_name)
-        self._serial_frames = self._generate_serial_chain_recurse(self._root, end_frame_name)
+        self._serial_frames = self._generate_serial_chain_recurse(
+            self._root, end_frame_name
+        )
         if self._serial_frames is None:
             raise ValueError("Invalid end frame name %s." % end_frame_name)
 
     @staticmethod
-    def _generate_serial_chain_recurse(root_frame: frame.Frame, end_frame_name: str) -> Optional[List[frame.Frame]]:
+    def _generate_serial_chain_recurse(
+        root_frame: frame.Frame, end_frame_name: str
+    ) -> Optional[List[frame.Frame]]:
         for child in root_frame.children:
             if child.name == end_frame_name:
                 return [child]
             else:
-                frames = SerialChain._generate_serial_chain_recurse(child, end_frame_name)
+                frames = SerialChain._generate_serial_chain_recurse(
+                    child, end_frame_name
+                )
                 if not frames is None:
                     return [child] + frames
         return None
@@ -116,12 +131,17 @@ class SerialChain(Chain):
     def get_joint_parameter_names(self, exclude_fixed: bool = True) -> List[str]:
         names = []
         for f in self._serial_frames:
-            if exclude_fixed and f.joint.joint_type == 'fixed':
+            if exclude_fixed and f.joint.joint_type == "fixed":
                 continue
             names.append(f.joint.name)
         return names
 
-    def forward_kinematics(self, th: List[float], world: transform.Transform = transform.Transform(), end_only: bool = True) -> Union[transform.Transform, Dict[str, transform.Transform]]:
+    def forward_kinematics(
+        self,
+        th: List[float],
+        world: transform.Transform = transform.Transform(),
+        end_only: bool = True,
+    ) -> Union[transform.Transform, Dict[str, transform.Transform]]:
         cnt = 0
         link_transforms = {}
         trans = world
@@ -133,9 +153,15 @@ class SerialChain(Chain):
             link_transforms[f.link.name] = trans * f.link.offset
             if f.joint.joint_type != "fixed":
                 cnt += 1
-        return link_transforms[self._serial_frames[-1].link.name] if end_only else link_transforms
+        return (
+            link_transforms[self._serial_frames[-1].link.name]
+            if end_only
+            else link_transforms
+        )
 
-    def forward_kinematics_np(self, th: List[float], end_only: bool = True) -> Union[transform.Transform, Dict[str, transform.Transform]]:
+    def forward_kinematics_np(
+        self, th: List[float], end_only: bool = True
+    ) -> Union[transform.Transform, Dict[str, transform.Transform]]:
         """
         Returns:
             if end_only False:
@@ -146,7 +172,7 @@ class SerialChain(Chain):
         """
         cnt = 0
         link_transforms = np.empty(shape=(len(self._serial_frames), 4, 4))
-        trans = np.eye(4) # initial transformation matrix
+        trans = np.eye(4)  # initial transformation matrix
         for idx, f in enumerate(self._serial_frames):
             if f.joint.joint_type != "fixed":
                 trans = trans @ f.get_transform(th[cnt]).matrix()
@@ -157,7 +183,9 @@ class SerialChain(Chain):
                 cnt += 1
         return link_transforms[-1] if end_only else link_transforms
 
-    def forward_kinematics_batch(self, thb: np.array, end_only: bool = True) -> Union[transform.Transform, Dict[str, transform.Transform]]:
+    def forward_kinematics_batch(
+        self, thb: np.array, end_only: bool = True
+    ) -> Union[transform.Transform, Dict[str, transform.Transform]]:
         """
         Arguments:
             thb: np.arrray (batch_size, dof)
@@ -170,7 +198,9 @@ class SerialChain(Chain):
         """
         cnt = 0
         link_transformsb = np.empty(shape=(len(thb), len(self._serial_frames), 4, 4))
-        trans = np.repeat(np.eye(4)[None], repeats=len(thb), axis=0) # initial transformation matrix
+        trans = np.repeat(
+            np.eye(4)[None], repeats=len(thb), axis=0
+        )  # initial transformation matrix
         for idx, f in enumerate(self._serial_frames):
             if f.joint.joint_type != "fixed":
                 trans = trans @ f.get_transform_matrizes(thb[:, cnt])
@@ -188,11 +218,15 @@ class SerialChain(Chain):
         else:
             jacobians = {}
             for serial_frame in self._serial_frames:
-                jac = jacobian.calc_jacobian_frames(self, th, link_name=serial_frame.link.name)
+                jac = jacobian.calc_jacobian_frames(
+                    self, th, link_name=serial_frame.link.name
+                )
                 jacobians[serial_frame.link.name] = jac
             return jacobians
 
-    def jacobian_batch(self, thb: np.array, poseb: Optional[np.array], end_only: bool = True) -> np.ndarray:
+    def jacobian_batch(
+        self, thb: np.array, poseb: Optional[np.array], end_only: bool = True
+    ) -> np.ndarray:
         """
         Arguments:
             thb: np.arrray (batch_size, dof)
@@ -209,9 +243,13 @@ class SerialChain(Chain):
         else:
             jacobians = {}
             for idx, serial_frame in enumerate(self._serial_frames):
-                jac = jacobian.calc_jacobian_frames_batch(self, thb, poseb=poseb[:, idx], link_name=serial_frame.link.name)
+                jac = jacobian.calc_jacobian_frames_batch(
+                    self, thb, poseb=poseb[:, idx], link_name=serial_frame.link.name
+                )
                 jacobians[serial_frame.link.name] = jac
             return jacobians
 
-    def inverse_kinematics(self, pose: transform.Transform, initial_state: Optional[np.ndarray] = None) -> np.ndarray:
+    def inverse_kinematics(
+        self, pose: transform.Transform, initial_state: Optional[np.ndarray] = None
+    ) -> np.ndarray:
         return ik.inverse_kinematics(self, pose, initial_state)

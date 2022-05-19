@@ -5,7 +5,11 @@ import numpy as np
 from . import transform
 
 
-def calc_jacobian(serial_chain: Any, th: List[float], tool: transform.Transform = transform.Transform()) -> np.ndarray:
+def calc_jacobian(
+    serial_chain: Any,
+    th: List[float],
+    tool: transform.Transform = transform.Transform(),
+) -> np.ndarray:
     ndof = len(th)
     j_fl = np.zeros((6, ndof))
     cur_transform = tool.matrix()
@@ -15,7 +19,9 @@ def calc_jacobian(serial_chain: Any, th: List[float], tool: transform.Transform 
         if f.joint.joint_type == "revolute":
             cnt += 1
             delta = np.dot(f.joint.axis, cur_transform[:3, :3])
-            d = np.dot(np.cross(f.joint.axis, cur_transform[:3, 3]), cur_transform[:3, :3])
+            d = np.dot(
+                np.cross(f.joint.axis, cur_transform[:3, 3]), cur_transform[:3, :3]
+            )
             j_fl[:, -cnt] = np.hstack((d, delta))
         elif f.joint.joint_type == "prismatic":
             cnt += 1
@@ -31,7 +37,13 @@ def calc_jacobian(serial_chain: Any, th: List[float], tool: transform.Transform 
     j_w = np.dot(j_tr, j_fl)
     return j_w
 
-def calc_jacobian_frames(serial_chain: Any, th: List[float], link_name: str, tool: transform.Transform = transform.Transform()) -> np.ndarray:
+
+def calc_jacobian_frames(
+    serial_chain: Any,
+    th: List[float],
+    link_name: str,
+    tool: transform.Transform = transform.Transform(),
+) -> np.ndarray:
     ndof = len(th)
     j_fl = np.zeros((6, ndof))
     cur_transform = tool.matrix()
@@ -45,14 +57,16 @@ def calc_jacobian_frames(serial_chain: Any, th: List[float], link_name: str, too
             num_movable_joints += 1
 
         if serial_frame.link.name == link_name:
-            break # found first n joints
-        
-    cnt = len(th) - num_movable_joints # only first num_th joints
+            break  # found first n joints
+
+    cnt = len(th) - num_movable_joints  # only first num_th joints
     for f in reversed(serial_frames):
         if f.joint.joint_type == "revolute":
             cnt += 1
             delta = np.dot(f.joint.axis, cur_transform[:3, :3])
-            d = np.dot(np.cross(f.joint.axis, cur_transform[:3, 3]), cur_transform[:3, :3])
+            d = np.dot(
+                np.cross(f.joint.axis, cur_transform[:3, 3]), cur_transform[:3, :3]
+            )
             j_fl[:, -cnt] = np.hstack((d, delta))
         elif f.joint.joint_type == "prismatic":
             cnt += 1
@@ -71,7 +85,13 @@ def calc_jacobian_frames(serial_chain: Any, th: List[float], link_name: str, too
 
     return j_w
 
-def calc_jacobian_frames_fast(serial_chain: Any, th: List[float], link_name: str, tool: transform.Transform = transform.Transform()) -> np.ndarray:
+
+def calc_jacobian_frames_fast(
+    serial_chain: Any,
+    th: List[float],
+    link_name: str,
+    tool: transform.Transform = transform.Transform(),
+) -> np.ndarray:
     ndof = len(th)
     j_fl = np.zeros((6, ndof))
     cur_transform = tool.matrix()
@@ -85,14 +105,16 @@ def calc_jacobian_frames_fast(serial_chain: Any, th: List[float], link_name: str
             num_movable_joints += 1
 
         if serial_frame.link.name == link_name:
-            break # found first n joints
-        
-    cnt = len(th) - num_movable_joints # only first num_th joints
+            break  # found first n joints
+
+    cnt = len(th) - num_movable_joints  # only first num_th joints
     for f in reversed(serial_frames):
         if f.joint.joint_type == "revolute":
             cnt += 1
             delta = np.dot(f.joint.axis, cur_transform[:3, :3])
-            d = np.dot(np.cross(f.joint.axis, cur_transform[:3, 3]), cur_transform[:3, :3])
+            d = np.dot(
+                np.cross(f.joint.axis, cur_transform[:3, 3]), cur_transform[:3, :3]
+            )
             j_fl[:, -cnt] = np.hstack((d, delta))
         elif f.joint.joint_type == "prismatic":
             cnt += 1
@@ -112,11 +134,13 @@ def calc_jacobian_frames_fast(serial_chain: Any, th: List[float], link_name: str
     return j_w
 
 
-def calc_jacobian_frames_batch(serial_chain: Any, thb: np.array, link_name: str, poseb: Optional[np.array] = None) -> np.ndarray:
+def calc_jacobian_frames_batch(
+    serial_chain: Any, thb: np.array, link_name: str, poseb: Optional[np.array] = None
+) -> np.ndarray:
     """
     Arguments
     ====
-    thb: np.array (batch_size, state_dim) 
+    thb: np.array (batch_size, state_dim)
     poses: np.array (batch_size, 4, 4)
     """
     ndof = thb.shape[1]
@@ -134,9 +158,9 @@ def calc_jacobian_frames_batch(serial_chain: Any, thb: np.array, link_name: str,
         num_joint += 1
 
         if serial_frame.link.name == link_name:
-            break # found first n joints
-        
-    cnt = ndof - num_movable_joints # only first num_th joints
+            break  # found first n joints
+
+    cnt = ndof - num_movable_joints  # only first num_th joints
     for f in reversed(serial_frames):
         if f.joint.joint_type == "revolute":
             cnt += 1
