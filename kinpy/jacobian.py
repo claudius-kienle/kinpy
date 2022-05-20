@@ -140,9 +140,9 @@ def calc_jacobian_frames_batch(serial_chain: Any, thb: np.array, link_name: str,
     for f in reversed(serial_frames):
         if f.joint.joint_type == "revolute":
             cnt += 1
-            delta = f.joint.axis @ cur_transform[:, :3, :3]
+            delta = np.atleast_2d(f.joint.axis @ cur_transform[:, :3, :3])
             d = np.cross(f.joint.axis, cur_transform[:, :3, 3])
-            d = (d[:, None] @ cur_transform[:, :3, :3]).squeeze()
+            d = np.atleast_2d((d[:, None] @ cur_transform[:, :3, :3]).squeeze())
             j_fl[:, :, -cnt] = np.hstack((d, delta))
         elif f.joint.joint_type == "prismatic":
             cnt += 1
